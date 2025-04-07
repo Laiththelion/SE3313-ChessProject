@@ -143,8 +143,7 @@ def receive_move_from_server():
         return None
 
 def listen_for_opponent_moves(board):
-    global player_color
-    # First message = role assignment
+    global player_color, opponent_disconnected
     role_msg = receive_move_from_server()
     if role_msg == "ROLE:WHITE":
         player_color = 'white'
@@ -153,13 +152,20 @@ def listen_for_opponent_moves(board):
 
     while True:
         move_uci = receive_move_from_server()
-        if move_uci:
-            move = chess.Move.from_uci(move_uci)
-            if move in board.legal_moves:
-                board.push(move)
+        if not move_uci:
+            opponent_disconnected = True
+            break
+        if move_uci == "DISCONNECT":
+            opponent_disconnected = True
+            break
+        move = chess.Move.from_uci(move_uci)
+        if move in board.legal_moves:
+            board.push(move)
+
 
 def main():
-    global player_color
+    global player_color, opponent_disconnected
+    opponent_disconnected = False
     board = chess.Board()
     running = True
     selected_square = None
@@ -190,15 +196,25 @@ def main():
     ai_turn = board.turn and player_vs_ai
 
     while running:
-        draw_board()
-        draw_pieces(board)
+        screen.fill((30, 30, 30))
+        if not player_vs_ai and player_color is None:
+            waiting_font = pygame.font.Font(None, 40)
+            waiting_text =  waiting_font.render("Waiting for opponent to join...", True, (255, 255, 255))
+            screen.blit(waiting_text, (WIDTH // 2 - waiting_text.get_width() // 2, HEIGHT // 2))
+        else:   
+            draw_board()
+            draw_pieces(board)
         pygame.display.flip()
 
-        if board.is_checkmate():
+        if opponent_disconnected:
+            display_message("Opponent disconnected. You win!")
+            break
+
+        if player_color and board.is_checkmate():
             winner = "White" if board.turn == chess.BLACK else "Black"
             display_message(f"Checkmate! {winner} Wins.")
             break
-        elif board.is_stalemate():
+        elif player_color and board.is_stalemate():
             display_message("Stalemate! Game Over.")
             break
 
@@ -236,4 +252,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
