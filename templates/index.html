@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Web Chess</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+    <style>
+        #board {
+            width: 500px;
+            margin: 20px auto;
+        }
+        #status {
+            text-align: center;
+            font-size: 18px;
+        }
+        body {
+            background: #f9f9f9;
+            font-family: sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="text-align:center">♟️ Web Chess ♟️</h1>
+    <div id="board"></div>
+    <div id="status">Waiting for your move...</div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chess.js@1.0.0/chess.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+    <script>
+        const game = new Chess();
+        const board = Chessboard('board', {
+            draggable: true,
+            position: 'start',
+            onDrop: onDrop
+        });
+
+        function onDrop(source, target) {
+            const move = game.move({
+                from: source,
+                to: target,
+                promotion: 'q'
+            });
+
+            if (move === null) return 'snapback';
+
+            updateStatus();
+            sendMoveToServer(move.san);
+        }
+
+        function updateStatus() {
+            const status = game.turn() === 'w' ? 'White to move' : 'Black to move';
+            $('#status').text(status);
+        }
+
+        function sendMoveToServer(uciMove) {
+            $.ajax({
+                url: '/move',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ move: game.history({ verbose: true }).slice(-1)[0].from + game.history({ verbose: true }).slice(-1)[0].to }),
+                success: function (response) {
+                    console.log('Server response:', response);
+                },
+                error: function (xhr) {
+                    alert('Illegal move or server error');
+                }
+            });
+        }
+    </script>
+</body>
+</html>
