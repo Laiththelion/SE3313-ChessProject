@@ -11,3 +11,5 @@ To run the Chess Game
 
 3rd terminal 
  python .\Chess_logic\Chess_game_logic.py
+
+ Note: sprites must be stored in same directory as Chess_game_logic.py
