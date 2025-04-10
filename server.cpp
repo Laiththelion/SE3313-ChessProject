@@ -14,23 +14,23 @@
 #include <semaphore.h>
 
 #define PORT 8080
-
+//mutex used to protect access to child PID vector
 std::vector<pid_t> child_pids;
-std::mutex pid_mutex;
+std::mutex pid_mutex;  
 sem_t connection_sem;
 
 void handle_sigchld(int) {
     // Cleanup finished child processes to avoid zombies
     while (waitpid(-1, nullptr, WNOHANG) > 0);
 }
-
+// Function to handle match making between two clients 
 void match_handler(int client1, int client2) {
     std::cout << "[Server] Starting new match: " << client1 << " vs " << client2 << "\n";
 
     send(client1, "ROLE:WHITE", strlen("ROLE:WHITE"), 0);
     send(client2, "ROLE:BLACK", strlen("ROLE:BLACK"), 0);
 
-    fd_set readfds;
+    fd_set readfds; //used with select to keep track of client messages
     char buffer[1024];
 
     while (true) {
@@ -72,9 +72,9 @@ void cleaner(bool wait_for_cleanup) {
 
 int main() {
     signal(SIGCHLD, handle_sigchld);
-    sem_init(&connection_sem, 0, 1);
+    sem_init(&connection_sem, 0, 1); // Initiate semaphore for match handling 
 
-    int server_fd = socket(AF_INET, SOCK_STREAM, 0);
+    int server_fd = socket(AF_INET, SOCK_STREAM, 0); //connect clients to server 
     sockaddr_in address{};
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = INADDR_ANY;
@@ -83,7 +83,7 @@ int main() {
     bind(server_fd, (sockaddr*)&address, sizeof(address));
     listen(server_fd, 10);
     std::cout << "[Server] Listening on port " << PORT << "...\n";
-
+    // Game matching loop, that creates processes and cleaner threads 
     while (true) {
         sem_wait(&connection_sem);
 
